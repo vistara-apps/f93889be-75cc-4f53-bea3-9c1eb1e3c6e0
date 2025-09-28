@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Cyberpunk Gaming Theme */
+  --color-bg: #1a0d2e;
+  --color-fg: #e0e0e0;
+  --color-accent: #00ff41;
+  --color-surface: #2d1b4e;
+  --color-border: #00ff41;
+  --color-muted: #8b5fbf;
+  --font-mono: 'Courier New', monospace;
+}
+
+[data-theme="celo"] {
+  --color-bg: #000000;
+  --color-fg: #ffffff;
+  --color-accent: #fbcc5c;
+  --color-surface: #1a1a1a;
+  --color-border: #fbcc5c;
+  --color-muted: #666666;
+}
+
+[data-theme="solana"] {
+  --color-bg: #1a0d2e;
+  --color-fg: #ffffff;
+  --color-accent: #9945ff;
+  --color-surface: #2d1b4e;
+  --color-border: #9945ff;
+  --color-muted: #8b5fbf;
+}
+
+[data-theme="base"] {
+  --color-bg: #0f172a;
+  --color-fg: #f1f5f9;
+  --color-accent: #0052ff;
+  --color-surface: #1e293b;
+  --color-border: #0052ff;
+  --color-muted: #64748b;
+}
+
+[data-theme="coinbase"] {
+  --color-bg: #0a0e27;
+  --color-fg: #f7fafc;
+  --color-accent: #0052ff;
+  --color-surface: #1a202c;
+  --color-border: #0052ff;
+  --color-muted: #718096;
+}
+
+@layer base {
+  * {
+    @apply border-gray-800;
+  }
+  
+  body {
+    @apply bg-bg text-fg font-mono;
+    background-image: 
+      radial-gradient(circle at 20% 80%, rgba(0, 255, 65, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(139, 95, 191, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(45, 27, 78, 0.3) 0%, transparent 50%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-surface bg-opacity-80 backdrop-blur-sm border border-accent border-opacity-30;
+  }
+  
+  .cyber-border {
+    position: relative;
+    border: 2px solid var(--color-accent);
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+  
+  .cyber-border::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, var(--color-accent), transparent, var(--color-accent));
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    z-index: -1;
+    opacity: 0.3;
+  }
+  
+  .neon-glow {
+    box-shadow: 
+      0 0 5px var(--color-accent),
+      0 0 10px var(--color-accent),
+      0 0 15px var(--color-accent);
+  }
+  
+  .btn-primary {
+    @apply bg-accent text-bg px-6 py-3 font-bold uppercase tracking-wider cyber-border hover:neon-glow transition-all duration-200 transform hover:scale-105;
+  }
+  
+  .btn-secondary {
+    @apply bg-surface text-fg px-6 py-3 font-bold uppercase tracking-wider border-2 border-accent hover:bg-accent hover:text-bg transition-all duration-200;
+  }
+  
+  .input-cyber {
+    @apply bg-surface bg-opacity-50 border-2 border-accent border-opacity-50 text-fg px-4 py-3 focus:border-opacity-100 focus:neon-glow transition-all duration-200;
+    clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+  }
+  
+  .card-cyber {
+    @apply glass-card p-6 cyber-border hover:neon-glow transition-all duration-300 transform hover:scale-102;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 0 10px var(--color-accent);
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite alternate;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+}
