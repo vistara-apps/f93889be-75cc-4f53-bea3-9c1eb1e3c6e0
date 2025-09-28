@@ -1,0 +1,14 @@
+{
+  "name": "VoteVision",
+  "description": "VoteVision is a Base Mini App built with Zara.",
+  "image": "https://dummyimage.com/1200x628/0a0b0d/ffffff.png&text=OG",
+  "external_url": "https://f93889be-75cc-4f53-bea3-9c1eb1e3c6e0.vercel.app",
+  "properties": {
+    "app": {
+      "name": "VoteVision",
+      "description": "VoteVision is a Base Mini App built with Zara.",
+      "url": "https://f93889be-75cc-4f53-bea3-9c1eb1e3c6e0.vercel.app",
+      "icon": "https://0co.to/images/zara-2.png"
+    }
+  }
+}

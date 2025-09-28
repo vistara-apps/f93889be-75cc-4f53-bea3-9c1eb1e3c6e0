@@ -1,0 +1,30 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "frame": {
+    "version": "1",
+    "name": "VoteVision",
+    "subtitle": "Built with Zara",
+    "description": "VoteVision is a Base Mini App built with Zara.",
+    "iconUrl": "https://0co.to/images/zara-2.png",
+    "homeUrl": "https://f93889be75cc4f53bea39c1eb1e3c6e0-b9fz.vercel.app",
+    "splashImageUrl": "https://f93889be75cc4f53bea39c1eb1e3c6e0-b9fz.vercel.app/splash.png",
+    "splashBackgroundColor": "#000000",
+    "heroImageUrl": "https://f93889be75cc4f53bea39c1eb1e3c6e0-b9fz.vercel.app/image.png",
+    "tagline": "VoteVision",
+    "screenshotUrls": [
+      "https://f93889be75cc4f53bea39c1eb1e3c6e0-b9fz.vercel.app/screenshot.png",
+      "https://f93889be75cc4f53bea39c1eb1e3c6e0-b9fz.vercel.app/screenshot.png"
+    ],
+    "primaryCategory": "social",
+    "tags": [
+      "base",
+      "miniapp",
+      "onchainkit"
+    ],
+    "webhookUrl": "https://f93889be75cc4f53bea39c1eb1e3c6e0-b9fz.vercel.app/api/webhook"
+  }
+}
