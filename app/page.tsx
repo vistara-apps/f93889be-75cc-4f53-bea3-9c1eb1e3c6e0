@@ -20,10 +20,39 @@ export default function VoteVisionApp() {
   }, [setFrameReady]);
 
   const handlePromptSubmit = async (prompt: string, category: string, template?: string) => {
-    console.log('Submitting prompt:', { prompt, category, template });
-    // In a real app, this would submit to your backend/blockchain
-    // For now, we'll just switch to the feed to show the new prompt
-    setActiveTab('feed');
+    if (!user) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/prompts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.address,
+          promptText: prompt,
+          category,
+          tags: template ? [template] : [],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit prompt');
+      }
+
+      // Switch to feed to show the new prompt
+      setActiveTab('feed');
+
+      // Show success message
+      alert('Prompt submitted successfully! It will appear in the community feed for voting.');
+    } catch (error: any) {
+      alert(`Failed to submit prompt: ${error.message}`);
+    }
   };
 
   const renderTabContent = () => {

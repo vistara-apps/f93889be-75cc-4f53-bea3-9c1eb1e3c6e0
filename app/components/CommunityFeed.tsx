@@ -1,93 +1,127 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, TrendingUp, Users, Filter } from 'lucide-react';
+import { Clock, TrendingUp, Users, Filter, AlertCircle, RefreshCw } from 'lucide-react';
 import { VideoPrompt } from '@/lib/types';
 import { VideoPreview } from './VideoPreview';
 import { VoteButton } from './VoteButton';
+import { LoadingSpinner, PromptCardSkeleton } from './LoadingSpinner';
 import { formatTimeAgo, calculateVotingPercentage } from '@/lib/utils';
 import { VIDEO_CATEGORIES } from '@/lib/constants';
+import { useWalletAuth } from '@/lib/auth';
 
 interface CommunityFeedProps {
   variant?: 'prompts' | 'results';
 }
 
-// Mock data for demonstration
-const mockPrompts: VideoPrompt[] = [
-  {
-    promptId: '1',
-    userId: 'user1',
-    promptText: 'A cyberpunk cityscape at night with neon lights reflecting on wet streets, flying cars in the distance',
-    status: 'voting',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    votesUp: 24,
-    votesDown: 3,
-    totalVotes: 27,
-    category: 'Entertainment',
-    tags: ['cyberpunk', 'city', 'neon', 'futuristic'],
-  },
-  {
-    promptId: '2',
-    userId: 'user2',
-    promptText: 'A peaceful forest scene with magical creatures and glowing mushrooms, ethereal lighting',
-    status: 'completed',
-    generatedVideoUrl: 'https://via.placeholder.com/640x360/1a0d2e/00ff41?text=Forest+Magic',
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-    votesUp: 45,
-    votesDown: 2,
-    totalVotes: 47,
-    category: 'Art & Design',
-    tags: ['fantasy', 'forest', 'magic', 'nature'],
-  },
-  {
-    promptId: '3',
-    userId: 'user3',
-    promptText: 'An epic space battle with massive starships, laser beams, and explosions against a starfield backdrop',
-    status: 'generating',
-    createdAt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-    votesUp: 18,
-    votesDown: 1,
-    totalVotes: 19,
-    category: 'Gaming',
-    tags: ['space', 'battle', 'sci-fi', 'action'],
-  },
-  {
-    promptId: '4',
-    userId: 'user4',
-    promptText: 'A cozy coffee shop interior with warm lighting, people working on laptops, steam rising from cups',
-    status: 'voting',
-    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-    votesUp: 12,
-    votesDown: 5,
-    totalVotes: 17,
-    category: 'Documentary',
-    tags: ['cozy', 'coffee', 'lifestyle', 'warm'],
-  },
-];
-
 export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
-  const [prompts, setPrompts] = useState<VideoPrompt[]>(mockPrompts);
+  const [prompts, setPrompts] = useState<VideoPrompt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'trending'>('recent');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
-  const handleVote = async (promptId: string, voteType: 'up' | 'down') => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setPrompts(prev => prev.map(prompt => {
-      if (prompt.promptId === promptId) {
-        const newPrompt = { ...prompt };
-        if (voteType === 'up') {
-          newPrompt.votesUp += 1;
-        } else {
-          newPrompt.votesDown += 1;
-        }
-        newPrompt.totalVotes = newPrompt.votesUp + newPrompt.votesDown;
-        return newPrompt;
+  const { address, isAuthenticated } = useWalletAuth();
+
+  // Fetch prompts from API
+  const fetchPrompts = async (reset = false) => {
+    try {
+      setError(null);
+      if (reset) {
+        setLoading(true);
+        setPage(1);
       }
-      return prompt;
-    }));
+
+      const params = new URLSearchParams({
+        limit: '12',
+        offset: reset ? '0' : ((page - 1) * 12).toString(),
+      });
+
+      if (filterCategory !== 'all') params.append('category', filterCategory);
+      if (filterStatus !== 'all') params.append('status', filterStatus);
+
+      const response = await fetch(`/api/prompts?${params}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch prompts');
+      }
+
+      const newPrompts = data.prompts.map((prompt: any) => ({
+        ...prompt,
+        createdAt: new Date(prompt.createdAt),
+      }));
+
+      if (reset) {
+        setPrompts(newPrompts);
+      } else {
+        setPrompts(prev => [...prev, ...newPrompts]);
+      }
+
+      setHasMore(newPrompts.length === 12);
+      if (!reset) setPage(prev => prev + 1);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchPrompts(true);
+  }, [filterCategory, filterStatus]);
+
+  // Handle voting
+  const handleVote = async (promptId: string, voteType: 'up' | 'down') => {
+    if (!isAuthenticated || !address) {
+      alert('Please connect your wallet to vote');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/votes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: address,
+          promptId,
+          voteType,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          alert('You have already voted on this prompt');
+          return;
+        }
+        throw new Error(data.error || 'Failed to cast vote');
+      }
+
+      // Update local state
+      setPrompts(prev => prev.map(prompt => {
+        if (prompt.promptId === promptId) {
+          const newPrompt = { ...prompt };
+          if (voteType === 'up') {
+            newPrompt.votesUp = (newPrompt.votesUp || 0) + 1;
+          } else {
+            newPrompt.votesDown = (newPrompt.votesDown || 0) + 1;
+          }
+          newPrompt.totalVotes = (newPrompt.votesUp || 0) + (newPrompt.votesDown || 0);
+          return newPrompt;
+        }
+        return prompt;
+      }));
+    } catch (err: any) {
+      alert(`Voting failed: ${err.message}`);
+    }
   };
 
   const filteredAndSortedPrompts = prompts
@@ -100,14 +134,46 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
     .sort((a, b) => {
       switch (sortBy) {
         case 'popular':
-          return b.totalVotes - a.totalVotes;
+          return (b.totalVotes || 0) - (a.totalVotes || 0);
         case 'trending':
-          return calculateVotingPercentage(b.votesUp, b.totalVotes) - calculateVotingPercentage(a.votesUp, a.totalVotes);
+          return calculateVotingPercentage(b.votesUp || 0, b.totalVotes || 0) - calculateVotingPercentage(a.votesUp || 0, a.totalVotes || 0);
         case 'recent':
         default:
           return b.createdAt.getTime() - a.createdAt.getTime();
       }
     });
+
+  if (loading && prompts.length === 0) {
+    return (
+      <div className="space-y-6">
+        {/* Loading skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PromptCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 mx-auto mb-4 bg-red-500 bg-opacity-20 rounded-full flex items-center justify-center">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+        </div>
+        <h3 className="text-lg font-medium text-fg mb-2">Failed to load prompts</h3>
+        <p className="text-muted mb-6">{error}</p>
+        <button
+          onClick={() => fetchPrompts(true)}
+          className="btn-primary flex items-center space-x-2 mx-auto"
+        >
+          <RefreshCw size={18} />
+          <span>Try Again</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -126,7 +192,7 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
               <option value="trending">Trending</option>
             </select>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <select
               value={filterCategory}
@@ -138,7 +204,7 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
-            
+
             {variant === 'prompts' && (
               <select
                 value={filterStatus}
@@ -166,17 +232,17 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
           </div>
           <p className="text-sm text-muted">Active Prompts</p>
         </div>
-        
+
         <div className="glass-card p-4 text-center">
           <div className="flex items-center justify-center mb-2">
             <TrendingUp className="w-5 h-5 text-accent mr-2" />
             <span className="text-2xl font-bold text-accent">
-              {filteredAndSortedPrompts.reduce((sum, p) => sum + p.totalVotes, 0)}
+              {filteredAndSortedPrompts.reduce((sum, p) => sum + (p.totalVotes || 0), 0)}
             </span>
           </div>
           <p className="text-sm text-muted">Total Votes</p>
         </div>
-        
+
         <div className="glass-card p-4 text-center">
           <div className="flex items-center justify-center mb-2">
             <Clock className="w-5 h-5 text-accent mr-2" />
@@ -194,7 +260,7 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
           <div key={prompt.promptId} className="card-cyber">
             {/* Video Preview */}
             <VideoPreview prompt={prompt} className="mb-4" />
-            
+
             {/* Prompt Info */}
             <div className="space-y-4">
               <div>
@@ -206,11 +272,11 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
                     {formatTimeAgo(prompt.createdAt)}
                   </span>
                 </div>
-                
+
                 <p className="text-fg leading-relaxed">
                   {prompt.promptText}
                 </p>
-                
+
                 {prompt.tags && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {prompt.tags.map((tag) => (
@@ -224,7 +290,7 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
                   </div>
                 )}
               </div>
-              
+
               {/* Status and Voting */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -239,15 +305,15 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
                   </span>
                   {prompt.status === 'voting' && (
                     <span className="text-xs text-muted">
-                      ({calculateVotingPercentage(prompt.votesUp, prompt.totalVotes)}% approval)
+                      ({calculateVotingPercentage(prompt.votesUp || 0, prompt.totalVotes || 0)}% approval)
                     </span>
                   )}
                 </div>
-                
+
                 <VoteButton
                   promptId={prompt.promptId}
-                  initialUpVotes={prompt.votesUp}
-                  initialDownVotes={prompt.votesDown}
+                  initialUpVotes={prompt.votesUp || 0}
+                  initialDownVotes={prompt.votesDown || 0}
                   onVote={handleVote}
                   size="sm"
                 />
@@ -257,8 +323,28 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
         ))}
       </div>
 
+      {/* Load More */}
+      {hasMore && !loading && (
+        <div className="text-center py-6">
+          <button
+            onClick={() => fetchPrompts()}
+            className="btn-secondary"
+            disabled={loading}
+          >
+            Load More Prompts
+          </button>
+        </div>
+      )}
+
+      {/* Loading indicator */}
+      {loading && prompts.length > 0 && (
+        <div className="text-center py-6">
+          <LoadingSpinner size="md" text="Loading more prompts..." />
+        </div>
+      )}
+
       {/* Empty State */}
-      {filteredAndSortedPrompts.length === 0 && (
+      {filteredAndSortedPrompts.length === 0 && !loading && (
         <div className="text-center py-12">
           <div className="w-16 h-16 mx-auto mb-4 bg-surface rounded-full flex items-center justify-center">
             <Users className="w-8 h-8 text-muted" />
@@ -272,3 +358,4 @@ export function CommunityFeed({ variant = 'prompts' }: CommunityFeedProps) {
     </div>
   );
 }
+
